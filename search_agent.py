@@ -17,8 +17,13 @@ INSTRUCTIONS = (
 @function_tool
 def web_search_tool(search_topic: str):
     """Tool to search the web"""
-    #return tavily_search(search= search_topic, max_results= 10)
-    return searxng_search(search= search_topic, page_no=1)
+    provider = os.getenv("SEARCH_PROVIDER", "searxng").lower()
+    
+    if provider == "tavily":
+        return tavily_search(search=search_topic, max_results=10)
+    else:
+        # Default to SearxNG
+        return searxng_search(search=search_topic, page_no=1)
 
 def searxng_search(search: str, page_no: int):
     import requests
