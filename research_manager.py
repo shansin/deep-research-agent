@@ -4,18 +4,25 @@ from planner_agent import planner_agent, WebSearchItem, WebSearchPlan
 from writer_agent import writer_agent, ReportData
 from email_agent import email_agent
 import asyncio
+import requests
+import os
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
 
 class ResearchManager:
 
-    async def run(self, query: str):
-        """ Run the deep research process, yielding the status updates and the final report"""
+    async def run(self, query: str, num_searches: int | None = 5):
+        """ Run the deep research process, yielding the status updates and the final report
+        Supports an optional `num_searches` to limit the number of planned searches."""
         trace_id = gen_trace_id()
         with trace("Research trace", trace_id=trace_id):
+            self.push_notification(f"DeepResearch Started: {query}")
             print(f"View trace: https://platform.openai.com/traces/trace?trace_id={trace_id}")
             yield f"View trace: https://platform.openai.com/traces/trace?trace_id={trace_id}"
             print("Starting research...")
-            search_plan = await self.plan_searches(query)
-            yield "Searches planned, starting to search..."     
+            search_plan = await self.plan_searches(query, num_searches=num_searches)
+            yield "Searches planned, starting to search..."
             search_results = await self.perform_searches(search_plan)
             yield "Searches complete, writing report..."
             report = await self.write_report(query, search_results)
@@ -23,17 +30,33 @@ class ResearchManager:
             await self.send_email(report)
             yield "Email sent, research complete"
             yield report.markdown_report
+            self.push_notification(f"DeepResearch Finished: {query}")
+
+    def push_notification(self, message):
+        #pushover setup
+        pushover_user = os.getenv("PUSHOVER_USER")
+        pushover_token = os.getenv("PUSHOVER_TOKEN")
+        pushover_url = "https://api.pushover.net/1/messages.json"
+        print(f"Push notificaiton to phone: {message}")
+        payload = {"user": pushover_user, "token": pushover_token, "message": message}
+        requests.post(pushover_url, data=payload)
         
 
-    async def plan_searches(self, query: str) -> WebSearchPlan:
-        """ Plan the searches to perform for the query """
+    async def plan_searches(self, query: str, num_searches: int) -> WebSearchPlan:
+        """ Plan the searches to perform for the query. Optionally limit to `num_searches`. """
         print("Planning searches...")
         result = await Runner.run(
             planner_agent,
-            f"Query: {query}",
+            f"Searches to perform: {num_searches} \n Query: {query}",
         )
-        print(f"Will perform {len(result.final_output.searches)} searches")
-        return result.final_output_as(WebSearchPlan)
+        plan = result.final_output_as(WebSearchPlan)
+        if num_searches is not None:
+            original = len(plan.searches)
+            plan.searches = plan.searches[:num_searches]
+            print(f"Will perform {len(plan.searches)} searches (requested {num_searches}, planner returned {original})")
+        else:
+            print(f"Will perform {len(plan.searches)} searches")
+        return plan
 
     async def perform_searches(self, search_plan: WebSearchPlan) -> list[str]:
         """ Perform the searches to perform for the query """

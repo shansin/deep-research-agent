@@ -8,3 +8,7 @@ TAVILY_API_KEY=xxxx
 
 OLLAMA_BASE_URL="http://localhost:11434/v1"
 SEARXNG_API_URL="http://localhost:8081"
+
+FROM_NAME=xxxx
+FROM_EMAIL=xxxx
+TO_EMAIL=xxxx

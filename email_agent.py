@@ -10,9 +10,9 @@ load_dotenv(override=True)
 def send_email(subject: str, html_body: str) -> Dict[str, str]:
     """Send an email with the given subject and HTML body"""
     # from_email has to be configured on dns, xxx@shanup.com is enabled
-    to = ["mailme.shantanu@gmail.com"]
-    from_name = "Shantanu Singh"
-    from_email = "shantanu@shanup.com"
+    to = [os.getenv("TO_EMAIL")]
+    from_name = os.getenv("FROM_NAME")
+    from_email = os.getenv('FROM_EMAIL')
 
     headers = {
         "Authorization": f"Bearer {os.getenv("RESEND_API_KEY")}",
