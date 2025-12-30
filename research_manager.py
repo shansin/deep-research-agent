@@ -1,5 +1,5 @@
 from agents import Runner, trace, gen_trace_id
-from search_agent import search_agent
+from search_agent import search_agent, search_provider_context
 from planner_agent import planner_agent, WebSearchItem, WebSearchPlan
 from writer_agent import writer_agent, ReportData
 from email_agent import email_agent
@@ -12,9 +12,10 @@ load_dotenv(override=True)
 
 class ResearchManager:
 
-    async def run(self, query: str, num_searches: int | None = 5):
+    async def run(self, query: str, num_searches: int | None = 5, search_provider: str = "searxng"):
         """ Run the deep research process, yielding the status updates and the final report
         Supports an optional `num_searches` to limit the number of planned searches."""
+        search_provider_context.set(search_provider)
         trace_id = gen_trace_id()
         with trace("Research trace", trace_id=trace_id):
             self.push_notification(f"DeepResearch Started: {query}")
@@ -22,13 +23,13 @@ class ResearchManager:
             yield f"View trace: https://platform.openai.com/traces/trace?trace_id={trace_id}"
             print("Starting research...")
             search_plan = await self.plan_searches(query, num_searches=num_searches)
-            yield "Searches planned, starting to search..."
+            yield f"Searches planned, starting to search. Using {search_provider}..."
             search_results = await self.perform_searches(search_plan)
-            yield "Searches complete, writing report..."
+            yield f"Searches complete, writing report..."
             report = await self.write_report(query, search_results)
-            yield "Report written, sending email..."
+            yield f"Report written, sending email..."
             await self.send_email(report)
-            yield "Email sent, research complete"
+            yield f"Email sent, research complete"
             yield report.markdown_report
             self.push_notification(f"DeepResearch Finished: {query}")
 

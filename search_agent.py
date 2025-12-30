@@ -13,11 +13,15 @@ INSTRUCTIONS = (
     "grammar. This will be consumed by someone synthesizing a report, so its vital you capture the "
     "essence and ignore any fluff. Do not include any additional commentary other than the summary itself.")
 
+from contextvars import ContextVar
+
+search_provider_context: ContextVar[str] = ContextVar("search_provider", default="searxng")
+
 #todo: get search tool selection from UI
 @function_tool
 def web_search_tool(search_topic: str):
     """Tool to search the web"""
-    provider = os.getenv("SEARCH_PROVIDER", "searxng").lower()
+    provider = search_provider_context.get().lower()
     
     if provider == "tavily":
         return tavily_search(search=search_topic, max_results=10)
